@@ -31,11 +31,6 @@ abstract class AbstractMysqlTypingDedupingTest : JdbcTypingDedupingTest() {
     override fun getDataSource(config: JsonNode?): DataSource =
         MySQLDestination().getDataSource(bareMetalConfig)
 
-    override fun disableFinalTableComparison(): Boolean {
-        // TODO delete this in the next stacked PR
-        return true
-    }
-
     @Throws(Exception::class)
     override fun dumpRawTableRecords(streamNamespace: String?, streamName: String): List<JsonNode> {
         var streamNamespace = streamNamespace
@@ -102,7 +97,6 @@ abstract class AbstractMysqlTypingDedupingTest : JdbcTypingDedupingTest() {
         @Throws(Exception::class)
         fun setupMysql() {
             testContainer = MysqlTestDatabase.`in`(MysqlTestDatabase.BaseImage.MYSQL_8)
-
             containerizedConfig =
                 testContainer
                     .configBuilder()
