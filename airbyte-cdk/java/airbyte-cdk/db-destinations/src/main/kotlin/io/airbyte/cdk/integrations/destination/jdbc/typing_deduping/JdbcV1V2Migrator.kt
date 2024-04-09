@@ -19,10 +19,10 @@ import lombok.SneakyThrows
  * Largely based on
  * [io.airbyte.integrations.destination.snowflake.typing_deduping.SnowflakeV1V2Migrator].
  */
-class JdbcV1V2Migrator(
-    private val namingConventionTransformer: NamingConventionTransformer,
-    private val database: JdbcDatabase,
-    private val databaseName: String
+open class JdbcV1V2Migrator(
+    protected val namingConventionTransformer: NamingConventionTransformer,
+    protected val database: JdbcDatabase,
+    protected val databaseName: String?
 ) : BaseDestinationV1V2Migrator<TableDefinition>() {
     @SneakyThrows
     override fun doesAirbyteInternalNamespaceExist(streamConfig: StreamConfig?): Boolean {

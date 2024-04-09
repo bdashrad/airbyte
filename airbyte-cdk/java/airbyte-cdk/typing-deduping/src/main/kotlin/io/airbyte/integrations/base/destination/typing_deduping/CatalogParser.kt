@@ -66,7 +66,17 @@ constructor(
             } else {
                 actualStreamConfig = originalStreamConfig
             }
-            streamConfigs.add(actualStreamConfig)
+            streamConfigs.add(
+                actualStreamConfig.copy(
+                    // If we had collisions, we modified the stream name.
+                    // Revert those changes.
+                    id =
+                        actualStreamConfig.id.copy(
+                            originalName = stream.stream.name,
+                            originalNamespace = stream.stream.namespace,
+                        ),
+                ),
+            )
 
             // Populate some interesting strings into the exception handler string deinterpolator
             addStringForDeinterpolation(actualStreamConfig.id.rawNamespace)
@@ -98,6 +108,7 @@ constructor(
                 }
             )
         }
+        LOGGER.info("Running sync with stream configs: $streamConfigs")
         return ParsedCatalog(streamConfigs)
     }
 
