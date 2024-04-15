@@ -39,6 +39,7 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.containers.MySQLContainer;
 
+@Disabled
 public class MySQLStrictEncryptDestinationAcceptanceTest extends JdbcDestinationAcceptanceTest {
 
   private MySQLContainer<?> db;

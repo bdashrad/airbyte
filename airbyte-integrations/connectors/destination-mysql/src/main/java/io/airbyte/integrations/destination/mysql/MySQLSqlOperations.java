@@ -4,6 +4,12 @@
 
 package io.airbyte.integrations.destination.mysql;
 
+import static io.airbyte.cdk.integrations.base.JavaBaseConstants.COLUMN_NAME_AB_EXTRACTED_AT;
+import static io.airbyte.cdk.integrations.base.JavaBaseConstants.COLUMN_NAME_AB_LOADED_AT;
+import static io.airbyte.cdk.integrations.base.JavaBaseConstants.COLUMN_NAME_AB_META;
+import static io.airbyte.cdk.integrations.base.JavaBaseConstants.COLUMN_NAME_AB_RAW_ID;
+import static io.airbyte.cdk.integrations.base.JavaBaseConstants.COLUMN_NAME_DATA;
+
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.airbyte.cdk.db.jdbc.JdbcDatabase;
 import io.airbyte.cdk.integrations.base.JavaBaseConstants;
@@ -15,6 +21,8 @@ import java.nio.file.Files;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @SuppressFBWarnings(
                     value = {"SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE"},
@@ -34,20 +42,7 @@ public class MySQLSqlOperations extends JdbcSqlOperations {
                                     final String schemaName,
                                     final String tmpTableName)
       throws SQLException {
-    if (records.isEmpty()) {
-      return;
-    }
-
-    verifyLocalFileEnabled(database);
-    try {
-      final File tmpFile = Files.createTempFile(tmpTableName + "-", ".tmp").toFile();
-
-      loadDataIntoTable(database, records, schemaName, tmpTableName, tmpFile);
-
-      Files.delete(tmpFile.toPath());
-    } catch (final IOException e) {
-      throw new SQLException(e);
-    }
+    throw new UnsupportedOperationException("Mysql requires V2");
   }
 
   @Override
@@ -56,14 +51,37 @@ public class MySQLSqlOperations extends JdbcSqlOperations {
                                          final String schemaName,
                                          final String tableName)
       throws Exception {
-    throw new UnsupportedOperationException("mysql does not yet support DV2");
+    if (records.isEmpty()) {
+      return;
+    }
+
+    verifyLocalFileEnabled(database);
+    try {
+      final File tmpFile = Files.createTempFile(tableName + "-", ".tmp").toFile();
+
+      loadDataIntoTable(
+          database,
+          records,
+          schemaName,
+          tableName,
+          tmpFile,
+          COLUMN_NAME_AB_RAW_ID,
+          COLUMN_NAME_DATA,
+          COLUMN_NAME_AB_EXTRACTED_AT,
+          COLUMN_NAME_AB_LOADED_AT,
+          COLUMN_NAME_AB_META);
+      Files.delete(tmpFile.toPath());
+    } catch (final IOException e) {
+      throw new SQLException(e);
+    }
   }
 
   private void loadDataIntoTable(final JdbcDatabase database,
                                  final List<PartialAirbyteMessage> records,
                                  final String schemaName,
                                  final String tmpTableName,
-                                 final File tmpFile)
+                                 final File tmpFile,
+                                 final String... columnNames)
       throws SQLException {
     database.execute(connection -> {
       try {
@@ -71,10 +89,38 @@ public class MySQLSqlOperations extends JdbcSqlOperations {
 
         final String absoluteFile = "'" + tmpFile.getAbsolutePath() + "'";
 
-        final String query = String.format(
-            "LOAD DATA LOCAL INFILE %s INTO TABLE %s.%s FIELDS TERMINATED BY ',' ENCLOSED BY '\"' ESCAPED BY '\\\"' LINES TERMINATED BY '\\r\\n'",
-            absoluteFile, schemaName, tmpTableName);
+        /*
+         * We want to generate a query like:
+         *
+         * LOAD DATA LOCAL INFILE '/a/b/c' INTO TABLE foo.bar FIELDS TERMINATED BY ',' ENCLOSED BY
+         * '"' ESCAPED BY '\"' LINES TERMINATED BY '\r\n' (@c0, @c1, @c2, @c3, @c4) SET _airybte_raw_id =
+         * NULLIF(@c0, ''), _airbyte_data = NULLIF(@c1, ''), _airbyte_extracted_at = NULLIF(@c2, ''),
+         * _airbyte_loaded_at = NULLIF(@c3, ''), _airbyte_meta = NULLIF(@c4, '')
+         *
+         * This is to avoid weird default values (e.g. 0000-00-00 00:00:00) when the value should be NULL.
+         */
 
+        final String colVarDecls = "("
+            + IntStream.range(0, columnNames.length).mapToObj(i -> "@c" + i).collect(Collectors.joining(","))
+            + ")";
+        final String colAssignments = IntStream.range(0, columnNames.length)
+            .mapToObj(i -> columnNames[i] + " = NULLIF(@c" + i + ", '')")
+            .collect(Collectors.joining(","));
+
+        final String query = String.format(
+            """
+            LOAD DATA LOCAL INFILE %s INTO TABLE %s.%s
+            FIELDS TERMINATED BY ',' ENCLOSED BY '"' ESCAPED BY '\\"'
+            LINES TERMINATED BY '\\r\\n'
+            %s
+            SET
+            %s
+            """,
+            absoluteFile,
+            schemaName,
+            tmpTableName,
+            colVarDecls,
+            colAssignments);
         try (final Statement stmt = connection.createStatement()) {
           stmt.execute(query);
         }
@@ -129,16 +175,31 @@ public class MySQLSqlOperations extends JdbcSqlOperations {
   }
 
   @Override
-  public String createTableQuery(final JdbcDatabase database, final String schemaName, final String tableName) {
+  protected String createTableQueryV1(String schemaName, String tableName) {
+    throw new UnsupportedOperationException("Mysql requires V2");
+  }
+
+  @Override
+  protected String createTableQueryV2(String schemaName, String tableName) {
     // MySQL requires byte information with VARCHAR. Since we are using uuid as value for the column,
     // 256 is enough
     return String.format(
-        "CREATE TABLE IF NOT EXISTS %s.%s ( \n"
-            + "%s VARCHAR(256) PRIMARY KEY,\n"
-            + "%s JSON,\n"
-            + "%s TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6)\n"
-            + ");\n",
-        schemaName, tableName, JavaBaseConstants.COLUMN_NAME_AB_ID, JavaBaseConstants.COLUMN_NAME_DATA, JavaBaseConstants.COLUMN_NAME_EMITTED_AT);
+        """
+        CREATE TABLE IF NOT EXISTS %s.%s (\s
+        %s VARCHAR(256) PRIMARY KEY,
+        %s JSON,
+        %s TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6),
+        %s TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6),
+        %s JSON
+        );
+        """,
+        schemaName,
+        tableName,
+        JavaBaseConstants.COLUMN_NAME_AB_RAW_ID,
+        JavaBaseConstants.COLUMN_NAME_DATA,
+        JavaBaseConstants.COLUMN_NAME_AB_EXTRACTED_AT,
+        JavaBaseConstants.COLUMN_NAME_AB_LOADED_AT,
+        JavaBaseConstants.COLUMN_NAME_AB_META);
   }
 
   public static class VersionCompatibility {
