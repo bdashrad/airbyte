@@ -10,12 +10,13 @@ from typing import List
 
 import requests  # type: ignore
 import yaml  # type: ignore
-from dagger import Container, Directory, File
+from dagger import Container
 from pipelines import hacks
 from pipelines.airbyte_ci.connectors.build_image.steps.python_connectors import BuildConnectorImages
 from pipelines.airbyte_ci.connectors.consts import CONNECTOR_TEST_STEP_ID
 from pipelines.airbyte_ci.connectors.context import ConnectorContext
 from pipelines.consts import LOCAL_BUILD_PLATFORM
+from pipelines.dagger.containers.python import with_python_base
 from pipelines.helpers.execution.run_steps import STEP_TREE, StepToRun
 from pipelines.helpers.utils import get_exec_result
 from pipelines.models.steps import STEP_PARAMS, Step, StepResult
@@ -29,6 +30,7 @@ class RegressionTests(Step):
     skipped_exit_code = 5
     accept_extra_params = True
     regression_tests_artifacts_dir = Path("/tmp/regression_tests_artifacts")
+    working_directory = "/app"
 
     @property
     def default_params(self) -> STEP_PARAMS:
@@ -87,9 +89,8 @@ class RegressionTests(Step):
         Returns:
             StepResult: Failure or success of the regression tests with stdout and stderr.
         """
-        live_tests_dir = self.context.live_tests_dir
         start_timestamp = int(time.time())
-        container = await self._build_regression_test_container(live_tests_dir, await connector_under_test.id())
+        container = await self._build_regression_test_container(await connector_under_test.id())
         container = container.with_(hacks.never_fail_exec(self.regression_tests_command(start_timestamp)))
         regression_tests_artifacts_dir = str(self.regression_tests_artifacts_dir)
         await container.directory(regression_tests_artifacts_dir).export(regression_tests_artifacts_dir)
@@ -108,11 +109,10 @@ class RegressionTests(Step):
             report=regression_test_report,
         )
 
-    async def _build_regression_test_container(self, test_dir: Directory, target_container_id: str) -> Container:
+    async def _build_regression_test_container(self, target_container_id: str) -> Container:
         """Create a container to run regression tests."""
-        image = "python:3.10-slim"
+        container = with_python_base(self.context)
 
-        container = self.dagger_client.container().from_(image)
         container = (container.with_exec([
             "apt-get", "update"
         ]).with_exec([
@@ -130,7 +130,7 @@ class RegressionTests(Step):
             "/root/.config/gcloud/application_default_credentials.json",
             self.dagger_client.host().file(str(Path("~/.config/gcloud/application_default_credentials.json").expanduser()))  # TODO
         ).with_mounted_directory(
-            "/app", test_dir
+            "/app", self.context.live_tests_dir
         ).with_workdir(
             f"/app"
         ).with_exec([
