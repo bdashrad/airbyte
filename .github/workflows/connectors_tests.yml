@@ -42,6 +42,20 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         run: echo "branch=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
         id: extract_branch
+
+      - name: Install Poetry
+        id: install_poetry
+        uses: snok/install-poetry@v1
+
+      - name: Make poetry venv in project
+        id: poetry_venv
+        run: poetry config virtualenvs.in-project true
+
+      - name: Install Python packages
+        id: install_python_packages
+        working-directory: airbyte-ci/connectors/pipelines
+        run: poetry install
+
       - name: Fetch last commit id from remote branch [WORKFLOW DISPATCH]
         if: github.event_name == 'workflow_dispatch'
         id: fetch_last_commit_id_wd
