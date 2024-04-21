@@ -126,9 +126,6 @@ class RegressionTests(Step):
         ).with_mounted_file(
             "/root/.ssh/known_hosts",
             self.dagger_client.host().file(str(Path("~/.ssh/known_hosts").expanduser()))  # TODO
-        ).with_mounted_file(
-            "/root/.config/gcloud/application_default_credentials.json",
-            self.dagger_client.host().file(str(Path("~/.config/gcloud/application_default_credentials.json").expanduser()))  # TODO
         ).with_mounted_directory(
             "/app", self.context.live_tests_dir
         ).with_workdir(
