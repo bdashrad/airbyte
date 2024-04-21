@@ -121,12 +121,9 @@ class RegressionTests(Step):
             "bash", "-c", "curl https://sdk.cloud.google.com | bash"
         ]).with_env_variable(
          "PATH", "/root/google-cloud-sdk/bin:$PATH", expand=True
-        ).with_mounted_file(
-            "/root/.ssh/id_rsa", self.dagger_client.host().file(str(Path("~/.ssh/id_rsa").expanduser()))  # TODO
-        ).with_mounted_file(
-            "/root/.ssh/known_hosts",
-            self.dagger_client.host().file(str(Path("~/.ssh/known_hosts").expanduser()))  # TODO
-        ).with_mounted_directory(
+        ).with_exec([
+            "poetry", "config", "http-basic.repo", self.context.ci_git_user, self.context.ci_github_access_token
+        ]).with_mounted_directory(
             "/app", self.context.live_tests_dir
         ).with_workdir(
             f"/app"
