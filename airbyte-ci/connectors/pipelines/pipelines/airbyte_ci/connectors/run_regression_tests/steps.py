@@ -134,14 +134,13 @@ class RegressionTests(Step):
             ["poetry", "lock", "--no-update"]
         ).with_exec([
             "poetry", "install"
-        ])
-        # ).with_unix_socket(
-        #     "/var/run/docker.sock", self.dagger_client.host().unix_socket("/var/run/docker.sock")
-        # ).with_env_variable(
-        #     "RUN_IN_AIRBYTE_CI", "1"
-        # ).with_new_file(
-        #     "/tmp/container_id.txt", contents=str(target_container_id)
-        # )
+        ]).with_unix_socket(
+            "/var/run/docker.sock", self.dagger_client.host().unix_socket("/var/run/docker.sock")
+        ).with_env_variable(
+            "RUN_IN_AIRBYTE_CI", "1"
+        ).with_new_file(
+            "/tmp/container_id.txt", contents=str(target_container_id)
+        )
         return container
 
 
