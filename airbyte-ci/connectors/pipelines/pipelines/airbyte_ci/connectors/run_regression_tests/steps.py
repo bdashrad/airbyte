@@ -91,6 +91,7 @@ class RegressionTests(Step):
             StepResult: Failure or success of the regression tests with stdout and stderr.
         """
         start_timestamp = int(time.time())
+        main_logger.info(">>>>>>>>>>>>>>> about to _build_regression_test_container")
         container = await self._build_regression_test_container(await connector_under_test.id())
         main_logger.info(f">>>>>>>>>>>>>>> _build_regression_test_container stdout: {await container.stdout()}")
         main_logger.info(f">>>>>>>>>>>>>>> _build_regression_test_container stderr: {await container.stderr()}")
@@ -137,8 +138,6 @@ class RegressionTests(Step):
         ]).with_exec(
             ["poetry", "lock", "--no-update"]
         ).with_exec([
-            "poetry", "config", "http-basic.airbyte-platform-internal", "octavia-squidington-iii", self.context.ci_github_access_token
-        ]).with_exec([
             "poetry", "install"
         ]).with_unix_socket(
             "/var/run/docker.sock", self.dagger_client.host().unix_socket("/var/run/docker.sock")
