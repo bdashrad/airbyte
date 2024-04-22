@@ -24,21 +24,18 @@ object CompletableFutures {
         val result = CompletableFuture<List<Either<out Exception, Result>>>()
         val size = futures.size
         val counter = AtomicInteger()
-        val results =
-            java.lang.reflect.Array.newInstance(Either::class.java, size)
-                as Array<Either<Exception, Result>>
+        val results = mutableListOf<Either<out Exception, Result>>()
         // attach a whenComplete to all futures
-        for (i in 0 until size) {
-            val currentIndex = i
-            futures[i].whenComplete { value: Result, exception: Throwable? ->
+        for (future in futures) {
+            future.whenComplete { value: Result, exception: Throwable? ->
                 // if exception is null, then the future completed successfully
                 // maybe synchronization is unnecessary here, but it's better to be safe
                 synchronized(results) {
                     if (exception == null) {
-                        results[currentIndex] = Either.right(value)
+                        results.add(Either.right(value))
                     } else {
                         if (exception is Exception) {
-                            results[currentIndex] = Either.left(exception)
+                            results.add(Either.left(exception))
                         } else {
                             // this should never happen
                             throw RuntimeException(
@@ -50,7 +47,7 @@ object CompletableFutures {
                 }
                 val completedCount = counter.incrementAndGet()
                 if (completedCount == size) {
-                    result.complete(Arrays.asList(*results))
+                    result.complete(results)
                 }
             }
         }
