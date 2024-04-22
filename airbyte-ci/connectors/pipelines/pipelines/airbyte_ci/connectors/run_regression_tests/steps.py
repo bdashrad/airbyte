@@ -11,7 +11,7 @@ from typing import List
 import requests  # type: ignore
 import yaml  # type: ignore
 from dagger import Container
-from pipelines import hacks
+from pipelines import hacks, main_logger
 from pipelines.airbyte_ci.connectors.build_image.steps.python_connectors import BuildConnectorImages
 from pipelines.airbyte_ci.connectors.consts import CONNECTOR_TEST_STEP_ID
 from pipelines.airbyte_ci.connectors.context import ConnectorContext
@@ -92,11 +92,17 @@ class RegressionTests(Step):
         """
         start_timestamp = int(time.time())
         container = await self._build_regression_test_container(await connector_under_test.id())
+        main_logger.info(f">>>>>>>>>>>>>>> _build_regression_test_container stdout: {await container.stdout()}")
+        main_logger.info(f">>>>>>>>>>>>>>> _build_regression_test_container stderr: {await container.stderr()}")
         container = container.with_(hacks.never_fail_exec(self.regression_tests_command(start_timestamp)))
+        main_logger.info(f">>>>>>>>>>>>>>> never_fail_exec stdout: {await container.stdout()}")
+        main_logger.info(f">>>>>>>>>>>>>>> never_fail_exec stderr: {await container.stderr()}")
         regression_tests_artifacts_dir = str(self.regression_tests_artifacts_dir)
         # await container.directory(regression_tests_artifacts_dir).export(regression_tests_artifacts_dir)
         path_to_report = f"{regression_tests_artifacts_dir}/session_{int(start_timestamp)}/report.html"
         exit_code, stdout, stderr = await get_exec_result(container)
+        main_logger.info(f">>>>>>>>>>>>>>> get_exec_result stdout: {await container.stdout()}")
+        main_logger.info(f">>>>>>>>>>>>>>> get_exec_result stderr: {await container.stderr()}")
 
         # with open(path_to_report, "r") as fp:
         #     regression_test_report = fp.read()
