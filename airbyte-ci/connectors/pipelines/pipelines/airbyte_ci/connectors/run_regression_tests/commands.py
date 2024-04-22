@@ -78,6 +78,8 @@ async def test(
                 is_local=ctx.obj["is_local"],
                 git_branch=ctx.obj["git_branch"],
                 git_revision=ctx.obj["git_revision"],
+                ci_git_user=ctx.obj["ci_git_user"],
+                ci_github_access_token=ctx.obj["ci_github_access_token"],
                 ci_report_bucket=ctx.obj["ci_report_bucket_name"],
                 report_output_prefix=ctx.obj["report_output_prefix"],
                 use_remote_secrets=ctx.obj["use_remote_secrets"],
