@@ -59,6 +59,7 @@ async def test(
     Args:
         ctx (click.Context): The click context.
     """
+    main_logger.info("<<<<<<<<<<<< starting test() command")
     if ctx.obj["is_ci"]:
         fail_if_missing_docker_hub_creds(ctx)
 
@@ -71,6 +72,7 @@ async def test(
 
     connectors_tests_contexts = []
     for connector in ctx.obj["selected_connectors_with_modified_files"]:
+        main_logger.info(f"<<<<<<<<<<< connector: {connector}")
         connectors_tests_contexts.append(
             ConnectorContext(
                 pipeline_name=f"Testing connector {connector.technical_name}",
@@ -101,6 +103,7 @@ async def test(
             )
         )
 
+    main_logger.info("<<<<<<<<<<<< about to run_connectors_pipelines()")
     try:
         await run_connectors_pipelines(
             [connector_context for connector_context in connectors_tests_contexts],

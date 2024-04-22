@@ -90,6 +90,9 @@ async def run_connectors_pipelines(
     *args: Any,
 ) -> List[ConnectorContext] | List[PublishConnectorContext]:
     """Run a connector pipeline for all the connector contexts."""
+    from pipelines import main_logger
+
+    main_logger.info(f"<<<<<<<<<<<<<<< starting run_connectors_pipelines(execute_timeout={execute_timeout})")
 
     default_connectors_semaphore = anyio.Semaphore(concurrency)
     dagger_logs_output = sys.stderr if not dagger_logs_path else create_and_open_file(dagger_logs_path)
@@ -108,6 +111,7 @@ async def run_connectors_pipelines(
 
         async with anyio.create_task_group() as tg_connectors:
             for context in contexts:
+                main_logger.info(f"<<<<<<<<<<<<<<< context = {context}")
                 context.dagger_client = dagger_client.pipeline(f"{pipeline_name} - {context.connector.technical_name}")
                 context.dockerd_service = dockerd_service
                 tg_connectors.start_soon(
@@ -116,9 +120,12 @@ async def run_connectors_pipelines(
                     CONNECTOR_LANGUAGE_TO_FORCED_CONCURRENCY_MAPPING.get(context.connector.language, default_connectors_semaphore),
                     *args,
                 )
+        main_logger.info(f"<<<<<<<<<<<<<<< done contexts loop")
 
         # When the connectors pipelines are done, we can stop the dockerd service
         await dockerd_service.stop()
+        main_logger.info(f"<<<<<<<<<<<<<<< about to run_report_complete_pipeline")
         await run_report_complete_pipeline(dagger_client, contexts)
 
+    main_logger.info(f"<<<<<<<<<<<<<<< done...")
     return contexts
