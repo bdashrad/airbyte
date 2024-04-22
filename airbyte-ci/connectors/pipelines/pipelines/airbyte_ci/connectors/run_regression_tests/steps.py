@@ -139,13 +139,7 @@ class RegressionTests(Step):
             f"/app"
         ).with_exec([
             "pip", "install", "poetry"
-        ]).with_exec(
-           ["poetry", "source", "add", "--priority=supplemental", "airbyte-platform-internal-source", "https://github.com/airbytehq/airbyte-platform-internal.git"]
-        ).with_exec(
-            ["poetry", "config", "http-basic.airbyte-platform-internal-source", self.context.ci_git_user, self.context.ci_github_access_token]
-        ).with_exec(
-            ["poetry", "lock", "--no-update"]
-        ).with_exec([
+        ]).with_exec([
             "poetry", "install"
         ]).with_unix_socket(
             "/var/run/docker.sock", self.dagger_client.host().unix_socket("/var/run/docker.sock")
