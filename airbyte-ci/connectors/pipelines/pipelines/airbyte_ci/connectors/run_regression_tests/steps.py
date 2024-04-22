@@ -122,7 +122,7 @@ class RegressionTests(Step):
         ]).with_env_variable(
          "PATH", "/root/google-cloud-sdk/bin:$PATH", expand=True
         ).with_exec([
-            "poetry", "config", "http-basic.repo", self.context.ci_git_user, self.context.ci_github_access_token
+            "poetry", "config", "http-basic.repo", "octavia-squidington-iii", self.context.ci_github_access_token
         ]).with_mounted_directory(
             "/app", self.context.live_tests_dir
         ).with_workdir(
