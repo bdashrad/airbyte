@@ -119,6 +119,10 @@ class RegressionTests(Step):
 
     async def _build_regression_test_container(self, target_container_id: str) -> Container:
         """Create a container to run regression tests."""
+        from pipelines import main_logger
+
+        main_logger.info(f"_build_regression_test_container(): git credentials={[self.context.ci_git_user, bool(self.context.ci_github_access_token)]}")
+
         container = with_python_base(self.context)
 
         container = container.with_exec([
@@ -136,6 +140,10 @@ class RegressionTests(Step):
         ).with_exec([
             "pip", "install", "poetry"
         ]).with_exec(
+           ["poetry", "source", "add", "--priority=supplemental", "airbyte-platform-internal-source", "https://github.com/airbytehq/airbyte-platform-internal.git"]
+        ).with_exec(
+            ["poetry", "config", "http-basic.airbyte-platform-internal-source", self.context.ci_git_user, self.context.ci_github_access_token]
+        ).with_exec(
             ["poetry", "lock", "--no-update"]
         ).with_exec([
             "poetry", "install"
@@ -146,6 +154,8 @@ class RegressionTests(Step):
         ).with_new_file(
             "/tmp/container_id.txt", contents=str(target_container_id)
         )
+        main_logger.info(f"_built_regression_test_container()")
+
         return container
 
 

@@ -107,7 +107,9 @@ async def run_connectors_pipelines(
         else:
             dockerd_service = docker.with_global_dockerd_service(dagger_client)
 
+        main_logger.info(f"<<<<<<<<<<<<<<< about to start docker")
         await dockerd_service.start()
+        main_logger.info(f"<<<<<<<<<<<<<<< started docker")
 
         async with anyio.create_task_group() as tg_connectors:
             for context in contexts:
