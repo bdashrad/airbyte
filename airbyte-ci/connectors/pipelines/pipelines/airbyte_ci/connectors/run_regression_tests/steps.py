@@ -128,9 +128,7 @@ class RegressionTests(Step):
             "bash", "-c", "curl https://sdk.cloud.google.com | bash"
         ]).with_env_variable(
          "PATH", "/root/google-cloud-sdk/bin:$PATH", expand=True
-        ).with_exec([
-            "poetry", "config", "http-basic.airbyte-platform-internal", self.context.ci_git_user, self.context.ci_github_access_token
-        ]).with_mounted_directory(
+        ).with_mounted_directory(
             "/app", self.context.live_tests_dir
         ).with_workdir(
             f"/app"
@@ -139,6 +137,8 @@ class RegressionTests(Step):
         ]).with_exec(
             ["poetry", "lock", "--no-update"]
         ).with_exec([
+            "poetry", "config", "http-basic.airbyte-platform-internal", "octavia-squidington-iii", self.context.ci_github_access_token
+        ]).with_exec([
             "poetry", "install"
         ]).with_unix_socket(
             "/var/run/docker.sock", self.dagger_client.host().unix_socket("/var/run/docker.sock")
