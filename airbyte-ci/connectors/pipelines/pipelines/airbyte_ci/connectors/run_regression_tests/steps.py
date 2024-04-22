@@ -46,6 +46,7 @@ class RegressionTests(Step):
         }
 
     def regression_tests_command(self, start_timestamp: int) -> List[str]:
+        return ["poetry", "self", "show"]
         return [
             "poetry",
             "run",
@@ -93,12 +94,12 @@ class RegressionTests(Step):
         container = await self._build_regression_test_container(await connector_under_test.id())
         container = container.with_(hacks.never_fail_exec(self.regression_tests_command(start_timestamp)))
         regression_tests_artifacts_dir = str(self.regression_tests_artifacts_dir)
-        await container.directory(regression_tests_artifacts_dir).export(regression_tests_artifacts_dir)
+        # await container.directory(regression_tests_artifacts_dir).export(regression_tests_artifacts_dir)
         path_to_report = f"{regression_tests_artifacts_dir}/session_{int(start_timestamp)}/report.html"
         exit_code, stdout, stderr = await get_exec_result(container)
 
-        with open(path_to_report, "r") as fp:
-            regression_test_report = fp.read()
+        # with open(path_to_report, "r") as fp:
+        #     regression_test_report = fp.read()
 
         return StepResult(
             step=self,
@@ -106,14 +107,14 @@ class RegressionTests(Step):
             stderr=stderr,
             stdout=stdout,
             output=container,
-            report=regression_test_report,
+            # report=regression_test_report,
         )
 
     async def _build_regression_test_container(self, target_container_id: str) -> Container:
         """Create a container to run regression tests."""
         container = with_python_base(self.context)
 
-        container = (container.with_exec([
+        container = container.with_exec([
             "apt-get", "update"
         ]).with_exec([
             "apt-get", "install", "-y", "git", "openssh-client", "curl", "docker.io"
@@ -122,7 +123,7 @@ class RegressionTests(Step):
         ]).with_env_variable(
          "PATH", "/root/google-cloud-sdk/bin:$PATH", expand=True
         ).with_exec([
-            "poetry", "config", "http-basic.repo", "octavia-squidington-iii", self.context.ci_github_access_token
+            "poetry", "config", "http-basic.repo", self.context.ci_git_user, self.context.ci_github_access_token
         ]).with_mounted_directory(
             "/app", self.context.live_tests_dir
         ).with_workdir(
@@ -134,13 +135,13 @@ class RegressionTests(Step):
         ).with_exec([
             "poetry", "install"
         ])
-        ).with_unix_socket(
-            "/var/run/docker.sock", self.dagger_client.host().unix_socket("/var/run/docker.sock")
-        ).with_env_variable(
-            "RUN_IN_AIRBYTE_CI", "1"
-        ).with_new_file(
-            "/tmp/container_id.txt", contents=str(target_container_id)
-        )
+        # ).with_unix_socket(
+        #     "/var/run/docker.sock", self.dagger_client.host().unix_socket("/var/run/docker.sock")
+        # ).with_env_variable(
+        #     "RUN_IN_AIRBYTE_CI", "1"
+        # ).with_new_file(
+        #     "/tmp/container_id.txt", contents=str(target_container_id)
+        # )
         return container
 
 
