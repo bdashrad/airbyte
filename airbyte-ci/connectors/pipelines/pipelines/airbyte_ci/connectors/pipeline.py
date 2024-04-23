@@ -111,6 +111,12 @@ async def run_connectors_pipelines(
         await dockerd_service.start()
         main_logger.info(f"<<<<<<<<<<<<<<< started docker")
 
+        import subprocess
+        main_logger.info(subprocess.run(["md5sum", "pyproject.toml"], capture_output=True).stdout.decode("utf-8"))
+        main_logger.info(subprocess.run(["md5sum", "poetry.lock"], capture_output=True).stdout.decode("utf-8"))
+        main_logger.info("pyproject diff: " + subprocess.run(["diff", "-u", "pyproject.toml", "pyproject.toml.1"], capture_output=True).stdout.decode("utf-8"))
+        main_logger.info("poetry.lock diff: " + subprocess.run(["diff", "-u", "poetry.lock", "poetry.lock.1"], capture_output=True).stdout.decode("utf-8"))
+
         async with anyio.create_task_group() as tg_connectors:
             for context in contexts:
                 main_logger.info(f"<<<<<<<<<<<<<<< context = {context}")
