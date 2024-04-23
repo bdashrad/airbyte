@@ -112,6 +112,9 @@ async def run_connectors_pipelines(
         main_logger.info(f"<<<<<<<<<<<<<<< started docker")
 
         import subprocess
+        main_logger.info(subprocess.run(["pwd"], capture_output=True).stdout.decode("utf-8"))
+        main_logger.info(subprocess.run(["ls"], capture_output=True).stdout.decode("utf-8"))
+        main_logger.info(subprocess.run(["cat", "pyproject.toml"], capture_output=True).stdout.decode("utf-8"))
         main_logger.info(subprocess.run(["md5sum", "pyproject.toml"], capture_output=True).stdout.decode("utf-8"))
         main_logger.info(subprocess.run(["md5sum", "poetry.lock"], capture_output=True).stdout.decode("utf-8"))
         main_logger.info("pyproject diff: " + subprocess.run(["diff", "-u", "pyproject.toml", "pyproject.toml.1"], capture_output=True).stdout.decode("utf-8"))
